@@ -34,7 +34,7 @@ sub new {
         port                 => $args{port} || $args{socket} || 8080,
         timeout              => $args{timeout} || 300,
         keepalive_timeout    => $args{keepalive_timeout} || 2,
-        max_keepalive_reqs   => $args{max_keepalive_reqs} || 1,
+        max_keepalive_reqs   => $args{max_keepalive_reqs} || 100,
         server_software      => $args{server_software} || $class,
         server_ready         => $args{server_ready} || sub {},
         min_reqs_per_child   => (
@@ -42,7 +42,7 @@ sub new {
                 ? $args{min_reqs_per_child} : undef,
         ),
         max_reqs_per_child   => (
-            $args{max_reqs_per_child} || $args{max_requests} || 100,
+            $args{max_reqs_per_child} || $args{max_requests} || 1000,
         ),
         spawn_interval       => $args{spawn_interval} || 0,
         err_respawn_interval => (
@@ -156,6 +156,7 @@ sub accept_loop {
         my $req_count = 0;
         my $pipelined_buf = '';
 
+        my $i = 0;
         while (1) {
             ++$req_count;
             ++$proc_req_count;
@@ -179,6 +180,7 @@ sub accept_loop {
                 'psgix.informational' => sub {
                     $self->_informational($conn, @_);
                 },
+                'psgix.reuse_connection' => $i++,
             };
 
             my $may_keepalive = $req_count < $self->{max_keepalive_reqs};
